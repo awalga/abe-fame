@@ -1,0 +1,2 @@
+add_executable(relic_integration_test test_relic_memory.cpp test_relic_arithmetics.cpp test_relic_pairing.cpp)
+target_link_libraries(relic_integration_test gtest gtest_main odnfc)

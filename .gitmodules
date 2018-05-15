@@ -1,0 +1,9 @@
+[submodule "thirdparty/relic"]
+	path = thirdparty/relic
+	url = https://github.com/awalga/relic.git
+[submodule "thirdparty/tinycbor"]
+	path = thirdparty/tinycbor
+	url = https://github.com/awalga/tinycbor.git
+[submodule "test/lib/googletest"]
+	path = test/lib/googletest
+	url = https://github.com/google/googletest.git
