@@ -6,5 +6,8 @@
 ################################
 # Vendor TinyCBOR Build Options
 ################################
-add_subdirectory(${PROJECT_SOURCE_DIR}/thirdparty/tinycbor)
 
+################################
+# Import TinyCBOR and add project
+################################
+CPM_GIT ("tinycbor" "https://github.com/awalga/tinycbor.git" "v0.5.1" "${PROJECT_SOURCE_DIR}/thirdparty")
