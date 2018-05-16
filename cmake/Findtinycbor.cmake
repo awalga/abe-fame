@@ -10,4 +10,4 @@
 ################################
 # Import TinyCBOR and add project
 ################################
-CPM_GIT ("tinycbor" "https://github.com/awalga/tinycbor.git" "v0.5.1" "${PROJECT_SOURCE_DIR}/thirdparty")
+CPM_GIT ("tinycbor" "https://github.com/awalga/tinycbor.git" "master" "${PROJECT_SOURCE_DIR}/thirdparty")
