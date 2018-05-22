@@ -37,7 +37,6 @@ set(CMAKE_CXX_STANDARD 14)
 include(cmake/Findsodium.cmake)
 include(cmake/Findrelic.cmake)
 include(cmake/Findtinycbor.cmake)
-
 ################################
 # Library Sources
 ################################
@@ -69,7 +68,7 @@ target_include_directories(odnfc
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         $<INSTALL_INTERFACE:include>)
-target_link_libraries(odnfc tinycbor relic_s sodium)
+target_link_libraries(odnfc tinycbor relic sodium)
 
 ################################
 ## Install

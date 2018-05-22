@@ -6,7 +6,6 @@
 #define ODNCRYPTO_ZR_HPP
 #include "relic_import.h"
 #include "relic_util.hpp"
-#include "group.hpp"
 #include "group_arithmetics.hpp"
 
 namespace odn {
@@ -17,7 +16,6 @@ namespace crypto {
 class field_zr {
 
  public:
-
   field_zr() {
     bn_new(r);
     bn_new(z);
@@ -215,11 +213,24 @@ class field_zr {
     return std::move(quot);
   }
 
+  constexpr static size_t size() {
+    return relic_type::size_bn();
+  }
+
  private:
   friend group_arithmetics;
   template<typename T>
   friend
   class group;
+
+  /***********************************************
+   * * 		O/I operations
+   * *********************************************/
+  template<typename T>
+  friend T &serialize(T &, const field_zr &);
+
+  template<typename T>
+  friend T &deserialize(T &, field_zr &);
 
   bn_t r;
   bn_t z;
@@ -230,6 +241,28 @@ class field_zr {
     bn_copy(z, z_);
   }
 };
+
+template<typename T>
+T &serialize(T &ar, const field_zr &zr) {
+  auto zr_vector = ar.array();
+  uint8_t buffer[field_zr::size()];
+  bn_write_bin(buffer, field_zr::size(), zr.r);
+  zr_vector.push(buffer);
+  bn_write_bin(buffer, field_zr::size(), zr.z);
+  zr_vector.push(buffer);
+  return ar;
+}
+
+template<typename T>
+T &deserialize(T &ar, field_zr &zr) {
+  auto zr_vector = ar.array();
+  uint8_t buffer[field_zr::size()];
+  zr_vector.pop(&buffer);
+  bn_read_bin(zr.r, buffer, field_zr::size());
+  zr_vector.pop(&buffer);
+  bn_read_bin(zr.z, buffer, field_zr::size());
+  return ar;
+}
 }// end namespace crypto
 }// end namespace odn
 #endif //ODNCRYPTO_ZR_HPP

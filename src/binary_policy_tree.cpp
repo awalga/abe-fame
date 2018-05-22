@@ -43,7 +43,7 @@ const binary_policy_tree_node &binary_policy_tree_node::parent(const odn::crypto
 }
 
 const set<string> binary_policy_tree_node::prune(const odn::crypto::binary_policy_tree &policy,
-                                                                  const set<string> attributes) const {
+                                                 const set<string> attributes) const {
   stack<binary_policy_tree_node> nodes;
   nodes.push(*this);
 
@@ -61,7 +61,8 @@ const set<string> binary_policy_tree_node::prune(const odn::crypto::binary_polic
         if (attributes.find(current.attribute()) != attributes.cend()) {// treshold 1-2 OK
           gate_input->insert(current.attribute());
           while (this != parent_node
-              && (*gate == NodeType::OR || (*gate == NodeType::AND && gate_input->size() % 2 == 0))) {// check treshold 2-2
+              && (*gate == NodeType::OR
+                  || (*gate == NodeType::AND && gate_input->size() % 2 == 0))) {// check treshold 2-2
             auto *tmp_parent_node = &parent_node->parent(policy);
             gate = &tmp_parent_node->treshold();
             partials[tmp_parent_node->pos].insert(gate_input->cbegin(), gate_input->cend());
@@ -70,7 +71,8 @@ const set<string> binary_policy_tree_node::prune(const odn::crypto::binary_polic
           }
           // terminate
           if (this == parent_node
-              && (*gate == NodeType::LEAF || *gate == NodeType::OR || (*gate == NodeType::AND && gate_input->size() % 2 == 0))) {
+              && (*gate == NodeType::LEAF || *gate == NodeType::OR
+                  || (*gate == NodeType::AND && gate_input->size() % 2 == 0))) {
             return std::move(partials[pos]);
           }
         } else {// empty
@@ -109,6 +111,10 @@ size_t odn::crypto::binary_policy_tree::countLeaf() const {
       ++countLeaf;
   }
   return countLeaf;
+}
+
+size_t odn::crypto::binary_policy_tree::countNode() const {
+  return backend.size();
 }
 
 map<string, size_t> odn::crypto::binary_policy_tree::attributes() const {

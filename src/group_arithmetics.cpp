@@ -3,7 +3,7 @@
 //
 #include "odncrypto/relic_import.h"
 #include "odncrypto/group_arithmetics.hpp"
-#include "odncrypto/field_zr.hpp"
+#include "odncrypto/group.hpp"
 
 using namespace ::odn::crypto;
 
@@ -48,6 +48,6 @@ void group_arithmetics::product(odn::crypto::group_gt &product,
 }
 
 void group_arithmetics::pair(odn::crypto::group_gt &gt, const odn::crypto::group_g &g, const odn::crypto::group_h &h) {
-  pc_map(gt.gt, const_cast<g1_t&>(g.g1), const_cast<g2_t&>(h.g2));
+  pc_map(gt.gt, const_cast<g1_t &>(g.g1), const_cast<g2_t &>(h.g2));
 }
 

@@ -19,7 +19,7 @@ class sscipher_enc_stream {
   sscipher_enc_stream &operator=(const sscipher_enc_stream &) = delete;
   sscipher_enc_stream &operator=(sscipher_enc_stream &&) = default;
 
-  int operator()(const uint8_t *, size_t, uint8_t *, size_t&);
+  int operator()(const uint8_t *, size_t, uint8_t *, size_t &);
 
   int is_valid() const {
     return valid;
@@ -30,17 +30,21 @@ class sscipher_enc_stream {
   }
 
   const unsigned char *const header() const {
-    return state.header;
+    return session_state.header;
+  }
+
+  const sscipher_session_state &state() const {
+    return session_state;
   }
 
  private:
   friend class sscipher_session;
   // session state
-  sscipher_session_state state;
+  sscipher_session_state session_state;
   // valid stream
   int valid = 0;
   // private ctor
-  sscipher_enc_stream(sscipher_session_state &&state_) : state(state_) {}
+  sscipher_enc_stream(sscipher_session_state &&session_state_) : session_state(session_state_) {}
 };
 }// end namespace crypto
 }// end namespace odn

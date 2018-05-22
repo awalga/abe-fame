@@ -25,24 +25,24 @@ class memory_buffer {
   }
 
   const uint8_t *end() {
-    return begin() + buffer->size();
+    return begin() + buffer->capacity();
   }
 
   const uint8_t *end() const {
-    return begin() + buffer->size();
+    return begin() + buffer->capacity();
   }
 
   void realloc() {
-    buffer->resize(buffer->size() + (buffer->size() * 2 * (1 + std::sqrt(5)) / 3));
+    buffer->resize(buffer->size() + (buffer->size() * 2 * (1 + std::sqrt(5)) / 3));// TODO reserver
   }
 
   void realloc(const size_t len_) {
-    buffer->resize(len_ + (buffer->size() * 2 * (1 + std::sqrt(5)) / 3));
+    buffer->resize(len_ + (buffer->size() * 2 * (1 + std::sqrt(5)) / 3));// TODO reserver
   }
  private :
   std::shared_ptr<memory_type> buffer;
 };
-}
-}
+}// end namespace fc
+}// end namespace odn
 
 #endif //ODNFC_MEMORY_BUFFER_HPP

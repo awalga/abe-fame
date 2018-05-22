@@ -11,7 +11,7 @@ int sscipher_enc_stream::operator()(const uint8_t *msg, size_t msglen, uint8_t *
 
   unsigned long long int size = 0;
 
-  if (crypto_secretstream_xchacha20poly1305_push(&state.state, buffer, &size, msg, msglen, NULL, 0, 0) != 0) {
+  if (crypto_secretstream_xchacha20poly1305_push(&session_state.state, buffer, &size, msg, msglen, NULL, 0, 0) != 0) {
 
     len = size;
     valid = 1;

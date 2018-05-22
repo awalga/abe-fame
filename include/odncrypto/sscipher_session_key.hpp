@@ -13,6 +13,13 @@ constexpr static size_t KEY_SIZE = crypto_secretstream_xchacha20poly1305_KEYBYTE
 
 struct sscipher_session_key {
   unsigned char data[KEY_SIZE];
+  /***********************************************
+   * * 		O/I operations
+   * *********************************************/
+  template<typename T>
+  friend T &serialize(T &, const sscipher_session_key &);
+  template<typename T>
+  friend T &serialize(T &, sscipher_session_key &);
 };
 
 }// end namespace crypto

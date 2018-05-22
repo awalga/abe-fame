@@ -71,6 +71,7 @@ class group_gt {
     group_arithmetics::pair(pair, g, h);
     return std::move(pair);
   }
+
   /***********************************************
   * * 		operations *, /, ^
   * *********************************************/
@@ -148,14 +149,44 @@ class group_gt {
     return std::move(product);
   }
 
+  constexpr static size_t size() {
+    return 12 * relic_type::size_fp();
+  }
+
  private:
   friend group_arithmetics;
   template<typename T>
   friend
   class group;
 
+  /***********************************************
+   * * 		O/I operations
+   * *********************************************/
+  template<typename T>
+  friend T &serialize(T &, const group_gt &);
+
+  template<typename T>
+  friend T &deserialize(T &, group_gt &);
+
   gt_t gt;
 };
+
+template<typename T>
+T &serialize(T &ar, const odn::crypto::group_gt &gt) {
+  uint8_t buffer[group_gt::size()];
+  gt_write_bin(buffer, group_gt::size(), const_cast<gt_t &>(gt.gt), 0);
+  ar.push(buffer);
+  return ar;
+}
+
+template<typename T>
+T &deserialize(T &ar, odn::crypto::group_gt &gt) {
+  uint8_t buffer[group_gt::size()];
+  ar.pop(&buffer);
+  gt_read_bin(gt.gt, buffer, group_gt::size());
+  return ar;
+}
+
 }// end namespace crypto
 }// end odn
 #endif //ODNCRYPTO_GROUP_GT_HPP

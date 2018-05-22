@@ -6,322 +6,429 @@
 #define ODNFC_CBOR_PARSER_HPP
 
 #include "cbor.hpp"
-#include "cbor.h"
+#include <memory>
 
 namespace odn {
 namespace fc {
-class cbor_map_parser {
+/**
+ *
+ * @tparam cbor_reader
+ */
+template<typename cbor_reader>
+class cbor_parser_impl {
+
  public :
-  cbor_map_parser() = delete;
-  cbor_map_parser(CborValue reader_, CborValue map_reader) noexcept
-      : reader(reader_), map_reader(map_reader) {
-  }
-  cbor_map_parser(const cbor_map_parser &) = delete;
-  cbor_map_parser(cbor_map_parser &&other) noexcept
-      : reader(other.reader), map_reader(other.map_reader) {}
 
-  cbor_map_parser &operator=(const cbor_map_parser &) = delete;
-  cbor_map_parser &operator=(cbor_map_parser &&other) {
-    using namespace ::std;
-    swap(reader, other.reader);
-    swap(map_reader, other.map_reader);
-    return *this;
+  CborError _decode0(CborValue *value, long long &o) {
+    CborError err = cbor_value_get_int64(value, &o);
+    return err == CborNoError ? cbor_value_advance(value) : err;
   }
 
-  ~cbor_map_parser() {
-    while (!cbor_value_at_end(&map_reader)) {
-      cbor_value_advance(&map_reader);
+  CborError _decode0(CborValue *value, unsigned char &o) {
+    unsigned long long _o;
+    CborError err = cbor_value_get_uint64(value, &_o);
+    o = _o;// TODO check u ll size
+    return err == CborNoError ? cbor_value_advance(value) : err;
+  }
+
+  CborError _decode0(CborValue *value, unsigned long &o) {
+    unsigned long long _o;
+    CborError err = cbor_value_get_uint64(value, &_o);
+    o = _o;// TODO check u ll size
+    return err == CborNoError ? cbor_value_advance(value) : err;
+  }
+
+  CborError _decode0(CborValue *value, std::string &o) {
+    size_t length = 0;
+    cbor_value_get_string_length(value, &length);
+    std::string _str(length, '0');
+    CborError err = cbor_value_copy_text_string(value,
+                                                const_cast<char *>(_str.data()),
+                                                &length,
+                                                value);
+    o.assign(std::move(_str));
+    return err;
+  }
+
+  template<typename T>
+  CborError _decode0(CborValue *value, T &o) {
+    auto _reader = static_cast<cbor_reader *>(this);
+    deserialize(*_reader->reader_interface(), o);// TODO propagate loop error
+    return CborNoError;
+  }
+
+  CborError _decode_array0(CborValue *value, unsigned char *o, size_t size) {
+    return cbor_value_copy_byte_string(value, o, &size, value);
+  }
+
+  template<typename T>
+  CborError _decode_array0(CborValue *value, T *o, size_t size) {
+    auto _reader = static_cast<cbor_reader *>(this);
+    auto _array_reader = _reader->array_reader();
+
+    for (size_t i = 0; i < size; ++i) {
+      _array_reader.pop((o + static_cast<ptrdiff_t >(i)));
     }
 
-    cbor_value_leave_container(&reader, &map_reader);
+    return CborNoError;// TODO propagate loop error
   }
 
-  CborValue *getReader() {
-    return &reader;
+  template<typename T, size_t size>
+  CborError _decode_array1(CborValue *value, T(&o)[size]) {
+    return _decode_array0(value, o, size);
   }
 
-  CborValue *getContainer() {
-    return &map_reader;
-  }
- private :
-
-  CborValue reader, map_reader;
-};
-
-class cbor_array_parser {
- public :
-  cbor_array_parser() = delete;
-  cbor_array_parser(CborValue reader_, CborValue array_reader_) noexcept
-      : reader(reader_), array_reader(array_reader_) {
-  }
-  cbor_array_parser(const cbor_array_parser &) = delete;
-  cbor_array_parser(cbor_array_parser &&other) noexcept
-      : reader(other.reader), array_reader(other.array_reader) {}
-
-  cbor_array_parser &operator=(const cbor_array_parser &) = delete;
-  cbor_array_parser &operator=(cbor_array_parser &&other) {
-    using namespace ::std;
-    swap(reader, other.reader);
-    swap(array_reader, other.array_reader);
-    return *this;
+  template<typename T>
+  CborError _dispatch(CborValue *value, T &o, std::false_type) {
+    return _decode0(value, o);
   }
 
-  ~cbor_array_parser() {
-    while (!cbor_value_at_end(&array_reader)) {
-      cbor_value_advance(&array_reader);
+  template<typename T>
+  CborError _dispatch(CborValue *value, T &o, std::true_type) {
+    return _decode_array1(value, o);
+  }
+
+  template<typename T>
+  CborError _dispatch_decode_vector(CborValue *value, std::vector<T> &o, std::true_type) {
+    auto _reader = static_cast<cbor_reader *>(this);
+    auto _array_reader = _reader->array_reader();
+
+    for (size_t i = 0, _length = _array_reader.length(); i < _length; ++i) {
+      T _temp;
+      _array_reader.pop(&_temp);
+      o.push_back(std::move(_temp));
     }
 
-    cbor_value_leave_container(&reader, &array_reader);
-  }
-  CborValue *getReader() {
-    return &reader;
-  }
-  CborValue *getContainer() {
-    return &array_reader;
+    return CborNoError;// TODO propagate loop error
   }
 
- private :
-  CborValue reader, array_reader;
+  template<typename T>
+  CborError _dispatch_decode_vector(CborValue *value, std::vector<T> &o, std::false_type) {
+    auto _reader = static_cast<cbor_reader *>(this);
+    auto _array_reader = _reader->array_reader();
+
+    serializer<decltype(_array_reader), std::vector<T>>()(_array_reader, o);// TODO propagate loop error
+    return CborNoError;
+  }
+
+  template<typename T>
+  CborError _decode(CborValue *value, std::vector<T> &o) {
+    return _dispatch_decode_vector(value, o, std::is_default_constructible<T>{});
+  }
+
+  template<typename K, typename V>
+  CborError _dispatch_decode_map(CborValue *value, std::map<K, V> &o, std::true_type) {
+    auto _reader = static_cast<cbor_reader *>(this);
+    auto _map_reader = _reader->map_reader();
+
+    for (size_t i = 0, _size = _map_reader.size(); i < _size; ++i) {
+      K _tempKey;
+      V _tempValue;
+      _map_reader.get(&_tempKey, &_tempValue);
+      o.insert({std::move(_tempKey), std::move(_tempValue)});
+    }
+    return CborNoError;// TODO propagate loop error
+  }
+
+  template<typename K, typename V>
+  CborError _dispatch_decode_map(CborValue *value, std::map<K, V> &o, std::false_type) {
+    auto _reader = static_cast<cbor_reader *>(this);
+    auto _map_reader = _reader->map_reader();
+
+    serializer<decltype(_map_reader), std::map<K, V> >()(_map_reader, o);// TODO propagate loop error
+
+    return CborNoError;
+  }
+
+  template<typename K, typename V>
+  CborError _decode(CborValue *value, std::map<K, V> &o) {
+    return _dispatch_decode_map(value,
+                                o,
+                                std::is_default_constructible<K>{});// TODO both key and value must be default constructible
+  }
+
+  template<typename T>
+  CborError _decode(CborValue *value, T &&o) {
+    return _dispatch<T>(value,
+                        std::forward<T>(o),
+                        std::is_array<std::remove_cv_t<typename std::remove_reference<T>::type>>{});
+  }
+
+  size_t _array_length(CborValue *value) {
+    size_t _size = 0;
+    cbor_value_get_array_length(value, &_size);
+    return _size;
+  }
+
+  size_t _map_length(CborValue *value) {
+    size_t _size = 0;
+    cbor_value_get_map_length(value, &_size);
+    return _size;
+  }
 };
 
-class cbor_parser {
+/**
+ *
+ * @tparam cbor_reader_type
+ * @tparam cbor_container_type
+ */
+template<typename cbor_reader_type, typename cbor_container_type>
+class cbor_reader_base;
+
+/**
+ *
+ * @tparam cbor_reader_type
+ */
+template<typename cbor_reader_type>
+class cbor_reader_base<cbor_reader_type, cbor_container>
+    : public cbor_parser_impl<cbor_reader_base<cbor_reader_type, cbor_container>> {
  public :
+  auto array_reader() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
 
-  cbor_parser() noexcept : parser(), reader() {}
-  cbor_parser(CborParser parser_, CborValue reader_) noexcept
-      : parser(std::move(parser_)), reader(std::move(reader_)) {}
-  cbor_parser(const cbor_parser &) = delete;
-  cbor_parser(cbor_parser &&other) noexcept : parser(std::move(other.parser)), reader(std::move(other.reader)) {}
-
-  CborValue *getReader() {
-    return &reader;
+    return _reader->array();
   }
 
-  CborParser *getParser() {
-    return &parser;
+  auto map_reader() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+
+    return _reader->map();
   }
 
-  ~cbor_parser() {}
+  auto reader_interface() {
+    return static_cast<cbor_reader_type * >(this);
+  }
+
+  template<typename ValueType>
+  void pop(ValueType *o) {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+    auto _array_reader = _reader->array();
+    _array_reader.pop(o);
+  }
+  template<typename ValueType>
+  ValueType pop() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+    auto _array_reader = _reader->array();
+    return _array_reader.template pop<ValueType>();
+  }
+
+  template<typename KeyType, typename ValueType>
+  void get(KeyType *key, ValueType *value) {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+    auto _map_reader = _reader->map();
+    _map_reader.get(key, value);
+  }
+
+  template<typename KeyType, typename ValueType>
+  std::pair<KeyType, ValueType> get() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+    auto _map_reader = _reader->map();
+    return _map_reader.template get<KeyType, ValueType>();
+  }
+};
+
+/**
+ *
+ * @tparam cbor_reader_type
+ */
+template<typename cbor_reader_type>
+class cbor_reader_base<cbor_reader_type, cbor_array_container>
+    : public cbor_parser_impl<cbor_reader_base<cbor_reader_type, cbor_array_container>> {
+
  private:
-  CborParser parser;
-  CborValue reader;
-};
+  template<typename ValueType>
+  ValueType _pop(std::true_type) {
+    ValueType o;
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    this->_decode(parser->getContainer(), o);
+    return std::move(o);
+  }
 
-template<>
-struct is_array_type<cbor_array_parser> : std::true_type {
-  constexpr static bool value = true;
-  typedef cbor_array_parser type;
-};
-template<>
-struct is_dictionary_type<cbor_map_parser> : std::true_type {
-  constexpr static bool value = true;
-  typedef cbor_map_parser type;
-};
+  template<typename ValueType>
+  ValueType _pop(std::false_type) {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+    return adl_serializer<decltype(*_reader), ValueType>()(*_reader);
+  }
 
-template <typename cbor_reader, typename cbor_parser_type>
-class cbor_reader_base {};
-
-template<typename cbor_reader>
-class cbor_reader_base<cbor_reader, cbor_array_parser> {
  public :
-  template<size_t len_>
-  void pop(uint8_t (&data)[len_]) {
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
-    auto buflen_ = len_;
-    cbor_value_copy_byte_string(parser->getContainer(), data, &buflen_, parser->getContainer());
+  auto array_reader() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+
+    return _reader->array();
   }
 
-  void pop(uint8_t *data, size_t len) {
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
+  auto map_reader() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
 
-    auto buflen_ = len;
-    cbor_value_copy_byte_string(parser->getContainer(), data, &buflen_, parser->getContainer());
+    return _reader->map();
   }
 
-  int64_t pop_int() {
-    int64_t value;
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
-
-    cbor_value_get_int64(parser->getContainer(), &value);
-    cbor_value_advance(parser->getContainer());
-    return value;
+  auto reader_interface() {
+    return static_cast<cbor_reader_type * >(this);
   }
 
-  std::string pop_string() {
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
+  template<typename ValueType>
+  void pop(ValueType *o) {
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    this->_decode(parser->getContainer(), *o);
+  }
 
-    size_t length = 0;
-    cbor_value_get_string_length(parser->getContainer(), &length);
-    std::string str_(length, '0');
-    cbor_value_copy_text_string(parser->getContainer(),
-                                const_cast<char *>(str_.data()),
-                                &length,
-                                parser->getContainer());
-    return std::move(str_);
+  template<typename ValueType>
+  ValueType pop() {
+    return _pop<ValueType>(std::is_default_constructible<ValueType>{});
+  }
+
+  size_t length() {
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    return this->_array_length(parser->getParent());
   }
 };
 
-template<typename cbor_reader>
-class cbor_reader_base<cbor_reader, cbor_map_parser> {
+/**
+ *
+ * @tparam cbor_reader_type
+ */
+template<typename cbor_reader_type>
+class cbor_reader_base<cbor_reader_type, cbor_map_container>
+    : public cbor_parser_impl<cbor_reader_base<cbor_reader_type, cbor_map_container>> {
+ private:
+  template<typename T>
+  T _get_decoded(std::true_type) {
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    T o;
+    this->_decode(parser->getContainer(), o);
+    return o;
+  }
+
+  template<typename T>
+  T _get_decoded(std::false_type) {
+    auto _reader = static_cast<cbor_reader_type *>(this);
+    return adl_serializer<decltype(*_reader), T>()(*_reader);
+  }
+
+  template<typename KeyType, typename ValueType>
+  ValueType _get(KeyType *key) {
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    this->_decode(parser->getContainer(), *key);
+    return _get_decoded<ValueType>(std::is_default_constructible<ValueType>{});
+  }
+
+  template<typename KeyType, typename ValueType>
+  std::pair<KeyType, ValueType> _get() {
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    KeyType key = _get_decoded<KeyType>(std::is_default_constructible<KeyType>{});
+    ValueType value = _get_decoded<ValueType>(std::is_default_constructible<ValueType>{});
+    return {key, value};
+  }
+
  public :
-  template<size_t len_>
-  void get(std::string *key, uint8_t (&value)[len_]) {
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
-    auto container = parser->getContainer();
+  auto array_reader() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
 
-    size_t length = 0;
-    cbor_value_get_string_length(container, &length);
-    std::string str_(length, '0');
-    cbor_value_copy_text_string(container,
-                                const_cast<char *>(str_.data()),
-                                &length,
-                                container);
-    key->assign(std::move(str_));
-    auto buflen_ = len_;
-    cbor_value_copy_byte_string(container, value, &buflen_, container);
+    return _reader->array();
   }
 
-  void get(std::string *key, uint8_t *value, const size_t len_) {
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
-    auto container = parser->getContainer();
+  auto map_reader() {
+    auto _reader = static_cast<cbor_reader_type *>(this);
 
-    size_t length = 0;
-    cbor_value_get_string_length(container, &length);
-    std::string str_(length, '0');
-    cbor_value_copy_text_string(container,
-                                const_cast<char *>(str_.data()),
-                                &length,
-                                container);
-    key->assign(std::move(str_));
-    auto buflen_ = len_;
-    cbor_value_copy_byte_string(container, value, &buflen_, container);
+    return _reader->map();
   }
 
-  void get(std::string *key, int64_t *value) {
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
-    auto container = parser->getContainer();
-
-    size_t length = 0;
-    cbor_value_get_string_length(container, &length);
-    std::string str_(length, '0');
-    cbor_value_copy_text_string(container,
-                                const_cast<char *>(str_.data()),
-                                &length,
-                                container);
-    key->assign(std::move(str_));
-    cbor_value_get_int64(container, value);
-    cbor_value_advance(container);
+  auto reader_interface() {
+    return static_cast<cbor_reader_type * >(this);
   }
-  void get(std::string *key, std::string *value) {
-    auto parser = static_cast<cbor_reader *>(this)->getParser();
-    auto container = parser->getContainer();
 
-    size_t length_key = 0;
-    cbor_value_get_string_length(container, &length_key);
-    std::string str_key(length_key, '0');
-    cbor_value_copy_text_string(container,
-                                const_cast<char *>(str_key.data()),
-                                &length_key,
-                                container);
-    key->assign(std::move(str_key));
-
-    size_t length_value = 0;
-    cbor_value_get_string_length(container, &length_value);
-    std::string str_value(length_value, '0');
-    cbor_value_copy_text_string(container,
-                                const_cast<char *>(str_value.data()),
-                                &length_value,
-                                container);
-    value->assign(std::move(str_value));
+  template<typename KeyType, typename ValueType>
+  void get(KeyType *key, ValueType *value) {
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    this->_decode(parser->getContainer(), *key);
+    this->_decode(parser->getContainer(), *value);
   }
-  template<size_t len_>
-  void get(const std::string &, uint8_t (&)[len_]);
-  void get(const std::string &, uint8_t *, size_t);
-  void get(const std::string &, int64_t *);
-  void get(const std::string &, std::string *);
+
+  template<typename KeyType, typename ValueType>
+  std::pair<KeyType, ValueType> get() {
+    return _get<KeyType, ValueType>();
+  }
+
+  size_t size() {
+    auto parser = static_cast<cbor_reader_type *>(this)->getParser();
+    return this->_map_length(parser->getParent());
+  }
 };
 
-template<typename cbor_parser_Type, typename buffer_Type>
-class cbor_reader : public cbor_reader_base<cbor_reader<cbor_parser_Type, buffer_Type>, cbor_parser_Type> {
+using namespace ::std;
+/**
+ *
+ * @tparam cbor_container_type
+ * @tparam buffer_type
+ */
+template<typename cbor_container_type, typename buffer_type>
+class cbor_reader : public cbor_reader_base<cbor_reader<cbor_container_type, buffer_type>, cbor_container_type> {
+ public :
+  cbor_reader() : parser(), cursor(make_unique<cbor_parser_cursor>()), buffer() {}
+  cbor_reader(const cbor_reader<cbor_container_type, buffer_type> &) = delete;
+  cbor_reader(cbor_reader<cbor_container_type, buffer_type> &&other) noexcept
+      : parser(std::move(other.parser)), cursor(std::move(other.cursor)), buffer(std::move(other.buffer)) {}
 
- public:
-  typedef cbor_parser_Type parser_type;
-
-  template<typename T = cbor_parser_Type, typename = typename std::enable_if<std::is_default_constructible<T>{}>::type>
-  cbor_reader() : parser(), buffer() {}
-  cbor_reader(const cbor_reader<cbor_parser_Type, buffer_Type> &) = delete;
-  template<typename = typename std::enable_if<std::is_move_constructible<cbor_parser_Type>{}>::type>
-  cbor_reader(cbor_reader<cbor_parser_Type, buffer_Type> &&other)
-      : parser(std::move(other.parser)), buffer(std::move(other.buffer)) {}
-
-  template<typename T = cbor_parser_Type, typename = typename std::enable_if<std::is_default_constructible<T>{}>::type>
-  explicit cbor_reader(buffer_Type buffer_) : parser(), buffer(std::move(buffer_)) {
+  explicit cbor_reader(buffer_type &&buffer_) : parser(), cursor(make_unique<cbor_parser_cursor>()), buffer(buffer_) {
     cbor_parser_init(buffer.begin(),
                      static_cast<size_t >(buffer.end() - buffer.begin()),
                      0,
-                     parser.getParser(),
-                     parser.getReader());
-  }
-  template<typename T = cbor_parser_Type, typename = typename std::enable_if<std::is_move_constructible<T>::value>::type>
-  cbor_reader(T encoder_, buffer_Type buffer_) : parser(std::move(encoder_)), buffer(std::move(buffer_)) {}
-
-  template<typename T, typename = typename std::enable_if<is_array_type<T>::value>::type>
-  cbor_reader<T, buffer_Type> array(const size_t length = CborIndefiniteLength) {
-    return array(length, is_container_type<cbor_parser_Type>{});
-  }
-  template<typename T, typename = typename std::enable_if<is_dictionary_type<T>::value>::type>
-  cbor_reader<T, buffer_Type> map(const size_t length = CborIndefiniteLength) {
-    return map(length, is_container_type<cbor_parser_Type>{});
+                     &parser,
+                     cursor->getContainer());
   }
 
-  const cbor_parser_Type *getParser() const {
-    return &parser;
+  explicit cbor_reader(const buffer_type &buffer_) : parser(), cursor(make_unique<cbor_parser_cursor>()), buffer(buffer_) {
+    cbor_parser_init(buffer.begin(),
+                     static_cast<size_t >(buffer.end() - buffer.begin()),
+                     0,
+                     &parser,
+                     cursor->getContainer());
   }
 
-  cbor_parser_Type *getParser() {
-    return &parser;
+  cbor_reader(CborParser parser_, unique_ptr<cbor_parser_cursor> cursor_, buffer_type buffer_) noexcept
+      : parser(parser_), cursor(std::move(cursor_)), buffer(std::move(buffer_)) {
+
   }
+
+  cbor_reader<cbor_array_container, buffer_type> array() {
+    CborValue array_reader;
+    CborValue *parent = cursor->getContainer();
+    cbor_value_enter_container(parent, &array_reader);// TODO check error
+
+    return cbor_reader<cbor_array_container, buffer_type>(parser, make_unique<cbor_parser_cursor>(array_reader, parent), buffer);
+  }
+
+  cbor_reader<cbor_map_container, buffer_type> map() {
+    CborValue map_reader;
+    CborValue *parent = cursor->getContainer();
+    cbor_value_enter_container(parent, &map_reader);// TODO check error
+    return cbor_reader<cbor_map_container, buffer_type>(parser, make_unique<cbor_parser_cursor>(map_reader, parent), buffer);
+  }
+
+  const cbor_parser_cursor *getParser() const {
+    return cursor.get();
+  }
+
+  cbor_parser_cursor *getParser() {
+    return cursor.get();
+  }
+
+  const buffer_type *getBuffer() const {
+    return &buffer;
+  }
+
+  buffer_type *getBuffer() {
+    return &buffer;
+  }
+
  private:
-  cbor_reader<cbor_array_parser, buffer_Type> array(size_t, std::false_type);
-  cbor_reader<cbor_array_parser, buffer_Type> array(size_t, std::true_type);
-  cbor_reader<cbor_map_parser, buffer_Type> map(size_t, std::false_type);
-  cbor_reader<cbor_map_parser, buffer_Type> map(size_t, std::true_type);
-
-  cbor_parser_Type parser;
-  buffer_Type buffer;
+  CborParser parser;
+  unique_ptr<cbor_parser_cursor> cursor;
+  buffer_type buffer;
 };
-
-template<typename T, typename B>
-cbor_reader<cbor_array_parser, B> cbor_reader<T, B>::array(size_t len, std::false_type) {
-  CborValue array_reader;
-  CborValue *parent = parser.getReader();
-  cbor_value_enter_container(parent, &array_reader);// TODO exception
-  return cbor_reader<cbor_array_parser, B>(cbor_array_parser(*parent, array_reader), buffer);
-}
-
-template<typename T, typename B>
-cbor_reader<cbor_array_parser, B> cbor_reader<T, B>::array(size_t len, std::true_type) {
-  CborValue array_reader;
-  CborValue *parent = parser.getContainer();
-  cbor_value_enter_container(parent, &array_reader);// TODO exception
-  return cbor_reader<cbor_array_parser, B>(cbor_array_parser(*parent, array_reader), buffer);
-}
-
-template<typename T, typename B>
-cbor_reader<cbor_map_parser, B> cbor_reader<T, B>::map(size_t len, std::false_type) {
-  CborValue map_reader;
-  CborValue *parent = parser.getReader();
-  cbor_value_enter_container(parent, &map_reader);// TODO exception
-  return cbor_reader<cbor_map_parser, B>(cbor_map_parser(*parent, map_reader), buffer);
-}
-
-template<typename T, typename B>
-cbor_reader<cbor_map_parser, B> cbor_reader<T, B>::map(size_t len, std::true_type) {
-  CborValue map_reader;
-  CborValue *parent = parser.getContainer();
-  cbor_value_enter_container(parent, &map_reader);// TODO exception
-  return cbor_reader<cbor_map_parser, B>(cbor_map_parser(*parent, map_reader), buffer);
-}
+template<typename bufferType>
+using cbor_reader_root = cbor_reader<cbor_container, bufferType>;
 }// end namespace fc
 }// end namespace odn
 #endif //ODNFC_CBOR_PARSER_HPP

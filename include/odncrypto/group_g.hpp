@@ -7,8 +7,8 @@
 
 #include "relic_import.h"
 #include "relic_util.hpp"
-#include "group_arithmetics.hpp"
 #include "field_zr.hpp"
+#include "group_arithmetics.hpp"
 
 namespace odn {
 namespace crypto {
@@ -19,7 +19,7 @@ class group_g {
 
  public:
 
-  group_g(): g1() {
+  group_g() : g1() {
     g1_new(g1);
   }
 
@@ -66,25 +66,6 @@ class group_g {
     group_g rand;
     g1_rand(rand.g1);
     return std::move(rand);
-  }
-
-  /***********************************************
-   * * 		O/I operations
-   * *********************************************/
-  template<typename Ar>
-  Ar& write(Ar &ar) const {
-    uint8_t buffer [relic_type::size_fp()];
-    g1_write_bin(buffer, relic_type::size_fp(), g1, 0);
-    ar.pack_bin(buffer, relic_type::size_fp());
-    return ar;
-  }
-
-  template<typename Ar>
-  Ar& read(Ar &ar) {
-    uint8_t buffer [relic_type::size_fp()];
-    ar.unpack_bin(buffer, relic_type::size_fp());
-    g1_read_bin(g1, buffer, 0);
-    return ar;
   }
 
   /***********************************************
@@ -167,6 +148,7 @@ class group_g {
     group_arithmetics::sum(*this, *this, pow);
     return *this;
   }
+
   /**
    * <p> group recursive addition </p>
    *
@@ -179,14 +161,48 @@ class group_g {
 
     return std::move(product);
   }
+
+  /**
+   *
+   * @return size
+   */
+  constexpr static size_t size() {
+    return 1 + 2 * relic_type::size_fp();
+  }
+
  private:
   friend group_arithmetics;
   template<typename T>
   friend
   class group;
 
+  /***********************************************
+   * * 		O/I operations
+   * *********************************************/
+  template<typename T>
+  friend T &serialize(T &, const group_g &);
+  template<typename T>
+  friend T &deserialize(T &, group_g &);
+
   g1_t g1;
 };
+
+template<typename T>
+T &serialize(T &ar, const odn::crypto::group_g &g) {
+  uint8_t buffer[group_g::size()];
+  g1_write_bin(buffer, group_g::size(), g.g1, 0);
+  ar.push(buffer);
+  return ar;
+}
+
+template<typename T>
+T &deserialize(T &ar, odn::crypto::group_g &g) {
+  uint8_t buffer[group_g::size()];
+  ar.pop(&buffer);
+  g1_read_bin(g.g1, buffer, group_g::size());
+  return ar;
+}
+
 }// end namespace crypto
 }// end namespace odn
 #endif //ODNCRYPTO_G_HPP

@@ -6,8 +6,8 @@
 #define ODNCRYPTO_H_HPP
 #include "relic_import.h"
 #include "relic_util.hpp"
-#include "group_arithmetics.hpp"
 #include "field_zr.hpp"
+#include "group_arithmetics.hpp"
 #include <functional>                                       // std::bind
 
 namespace odn {
@@ -43,6 +43,7 @@ class group_h {
 
     return *this;
   }
+
   group_h &operator=(group_h &&other) {
     relic_memory::relic_free(g2);// TODO copy first and restore temporary if error
     relic_memory::relic_move(g2, other.g2);
@@ -67,10 +68,10 @@ class group_h {
     g2_rand(rand.g2);
     return std::move(rand);
   }
+
   /***********************************************
    * * 		operations +, -, ^
    * *********************************************/
-
   /**
    * <p> addition inverse in group </p>
    *
@@ -162,14 +163,49 @@ class group_h {
     return std::move(product);
   }
 
+  /**
+   *
+   * @return
+   */
+  static constexpr size_t size() {
+    return 1 + 4 * relic_type::size_fp();
+  }
+
  private:
   friend group_arithmetics;
   template<typename T>
   friend
   class group;
 
+  /***********************************************
+   * * 		O/I operations
+   * *********************************************/
+  template<typename T>
+  friend T &serialize(T &, const group_h &);
+  template<typename T>
+  friend T &deserialize(T &, group_h &);
+
   g2_t g2;
 };
+
+template<typename T>
+T &serialize(T &ar, const odn::crypto::group_h &h) {
+  uint8_t buffer[group_h::size()];
+  g2_write_bin(buffer, group_h::size(), const_cast<g2_t &>(h.g2), 0);
+  ar.push(buffer);
+
+  return ar;
+}
+
+template<typename T>
+T &deserialize(T &ar, odn::crypto::group_h &h) {
+  uint8_t buffer[group_h::size()];
+  ar.pop(&buffer);
+  g2_read_bin(h.g2, buffer, group_h::size());
+
+  return ar;
+}
+
 }// end namespace crypto
 }// end namespace odn
 #endif //ODNCRYPTO_H_HPP

@@ -1,2 +1,4 @@
-add_executable(serialization_test test_cbor.cpp)
+add_executable(serialization_test test_cbor.cpp test_serialization_odn_object.cpp)
+#add_executable(serialization_test test_test.cpp)
 target_link_libraries(serialization_test gtest gtest_main odnfc)
+#target_link_libraries(serialization_test gtest gtest_main)

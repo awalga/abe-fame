@@ -95,7 +95,3 @@ group_gt group<group_gt>::gt_unity() {
   gt_set_unity(unity.gt);
   return std::move(unity);
 }
-
-void group<group_gt>::write(const odn::crypto::group_gt &gt_element, uint8_t *buffer, unsigned long long int len) {
-  gt_write_bin(buffer, len, const_cast<gt_t &>(gt_element.gt), 0);
-}
