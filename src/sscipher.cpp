@@ -28,8 +28,7 @@ sscipher_session sscipher::session(const unsigned char *key, unsigned long long 
   }
 }
 
-sscipher_session sscipher::session(const odn::crypto::group_gt &secret,
-                                   const odn::crypto::cpabe_cipher_text &cpabect) {
+sscipher_session sscipher::session(const odn::crypto::group_gt &secret) {
   sscipher_session_key sessionKey;
   using namespace ::odn::fc;
 

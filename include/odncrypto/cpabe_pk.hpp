@@ -28,7 +28,7 @@ class cpabe_pk {
 
  private:
 
-  friend class odn_cpabe;
+  friend class odn_abe;
   /***********************************************
  * * 		O/I operations
  * *********************************************/

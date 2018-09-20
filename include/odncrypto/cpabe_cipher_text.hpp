@@ -8,7 +8,6 @@
 #include "bilinear_pairing.hpp"
 #include "binary_policy_tree.hpp"
 
-#include <memory>                             // std::unique_ptr
 #include <vector>
 
 using namespace ::std;
@@ -18,6 +17,7 @@ namespace crypto {
 class cpabe_cipher_text {
 
  public :
+
   cpabe_cipher_text(bilinear_pairing pairing_param_,
                     binary_policy_tree policy_,
                     vector<group_h> ct0_,
@@ -30,9 +30,15 @@ class cpabe_cipher_text {
         ct(std::move(ct_)) {
   }
 
+  bool is_valid() const {
+    return ct0.size() == (pairing_param.klinear() + 1)
+        && cty.size() == policy.attributes().size() * (pairing_param.klinear() + 1);
+  }
+
   ~cpabe_cipher_text() = default;
+
  private :
-  friend class odn_cpabe;
+  friend class odn_abe;
   /***********************************************
    * * 		O/I operations
    * *********************************************/
@@ -45,6 +51,7 @@ class cpabe_cipher_text {
   vector<group_g> cty;// cipher key components
   group_gt ct;// cipher secret
 };
+
 template<typename T>
 T &serialize(T &ar, const cpabe_cipher_text &ct) {
   auto _array_ar = ar.array(5);

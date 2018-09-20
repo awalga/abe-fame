@@ -78,6 +78,7 @@ class group_g {
    */
   group_g &operator-() {
     g1_neg(g1, g1);
+    g1_norm(g1, g1);
     return *this;
   }
 
@@ -99,7 +100,8 @@ class group_g {
    * @return
    */
   group_g &operator+=(const group_g &rhs) {
-    g1_add(g1, g1, rhs.g1)
+    g1_add(g1, g1, rhs.g1);
+    g1_norm(g1, g1);
     return *this;
   }
 
@@ -123,6 +125,7 @@ class group_g {
    */
   group_g &operator-=(const group_g &rhs) {
     g1_sub(g1, g1, rhs.g1);
+    g1_norm(g1, g1);
     return *this;
   }
 
@@ -146,6 +149,7 @@ class group_g {
    */
   group_g &operator^=(const field_zr &pow) {
     group_arithmetics::sum(*this, *this, pow);
+    g1_norm(g1, g1);
     return *this;
   }
 
@@ -158,6 +162,7 @@ class group_g {
   const group_g operator^(const field_zr &pow) const {
     group_g product(*this);
     group_arithmetics::sum(product, *this, pow);
+    g1_norm(product.g1, product.g1);
 
     return std::move(product);
   }

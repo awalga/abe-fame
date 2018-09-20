@@ -149,7 +149,7 @@ TEST (serialization_crypto, serialize_policy) {
   }
 }
 
-#include "odncrypto/odn_cpabe.hpp"
+#include "odncrypto/odn_abe.hpp"
 
 TEST (serialization_crypto, serialize_msk) {
   using namespace ::odn::crypto;
@@ -157,7 +157,7 @@ TEST (serialization_crypto, serialize_msk) {
   memory_buffer buffer_msk;
   cbor_writer_memory encoder_msk(buffer_msk);
   {
-    auto msk = odn_cpabe::generate_authority(2);
+    auto msk = odn_abe::generate_authority(2);
     encoder_msk.push(msk);
   }
   memory_buffer buffer_pk;
@@ -166,7 +166,7 @@ TEST (serialization_crypto, serialize_msk) {
   {
     // deserialize msk and create pk
     auto msk_decoded = decoder_msk.pop<cpabe_msk>();
-    auto pk = odn_cpabe::generate_pk(msk_decoded);
+    auto pk = odn_abe::generate_pk(msk_decoded);
     encoder_pk.push(pk);
   }
   cbor_reader_memory decoder_pk(buffer_pk);
@@ -183,7 +183,7 @@ TEST (serialization_crypto, serialize_msk) {
     policy.root().addLeft<NodeType::OR>(policy).addRight(policy, NodeType::LEAF, "C");
     policy.root().addRight(policy, NodeType::LEAF, "B");
 
-    auto encrypt_session = odn_cpabe::encrypt_session(pk_decoded, policy);
+    auto encrypt_session = odn_abe::encrypt_session(pk_decoded, policy);
 
     auto encrypt = encrypt_session.first.enc_stream();
     uint8_t clear_text[] = {'s', 'e', 'c', 'r', 'e', 't', '0'};
@@ -207,7 +207,7 @@ TEST (serialization_crypto, serialize_msk) {
   {
     // deserialize msk and create sk
     auto msk_decoded = decoder_msk_second.pop<cpabe_msk>();
-    auto sk = odn_cpabe::generate_sk(msk_decoded, set<string>{"A", "B", "C"});
+    auto sk = odn_abe::generate_sk(msk_decoded, set<string>{"A", "B", "C"});
     encoder_sk.push(sk);
   }
 
@@ -225,7 +225,7 @@ TEST (serialization_crypto, serialize_msk) {
 
     auto cipher_state_decoded = decoder_ct_array.pop<sscipher_session_state>();
 
-    auto decrypt_session = odn_cpabe::decrypt_session(sk_decoded, cpabe_ct_decoded);
+    auto decrypt_session = odn_abe::decrypt_session(sk_decoded, cpabe_ct_decoded);
     auto decrypt = decrypt_session.dec_stream(cipher_state_decoded.header, HEADER_SIZE);
 
     uint8_t clear_text[cipher_text_str_decoded.length()];

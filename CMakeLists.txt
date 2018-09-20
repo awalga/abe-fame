@@ -52,7 +52,7 @@ set(ODN_CRYPTO_SOURCES
         src/cpabe_pk.cpp
         src/cpabe_sk.cpp
         src/cpabe_cipher_text.cpp
-        src/odn_cpabe.cpp
+        src/odn_abe.cpp
         src/sscipher.cpp
         src/sscipher_enc_stream.cpp
         src/sscipher_dec_stream.cpp

@@ -15,7 +15,7 @@ namespace crypto {
 class sscipher {
  public :
   static sscipher_session session(const unsigned char *, unsigned long long);
-  static sscipher_session session(const group_gt &, const cpabe_cipher_text &);
+  static sscipher_session session(const group_gt &);
 };
 
 } // end namespace crypto

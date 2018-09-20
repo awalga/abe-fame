@@ -35,7 +35,7 @@ class cpabe_msk {
 
   ~cpabe_msk() = default;
  private:
-  friend class odn_cpabe;
+  friend class odn_abe;
   /***********************************************
    * * 		O/I operations
    * *********************************************/

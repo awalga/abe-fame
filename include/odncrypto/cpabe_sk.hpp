@@ -8,10 +8,9 @@
 #include "bilinear_pairing.hpp"
 
 #include <vector>
-#include <string>
 #include <set>
 #include <map>
-#include <memory>                             // std::unique_ptr
+#include <string>
 
 namespace odn {
 namespace crypto {
@@ -29,14 +28,16 @@ class cpabe_sk {
   }
 
   bool is_valid() const {
+
     return sk0.size() == (pairing_param.klinear() + 1) && sk1.size() == (pairing_param.klinear() + 1) && sky.size() > 0;
+
   }
 
   ~cpabe_sk() = default;
 
  private:
 
-  friend class odn_cpabe;
+  friend class odn_abe;
 /***********************************************
  * * 		O/I operations
  * *********************************************/
